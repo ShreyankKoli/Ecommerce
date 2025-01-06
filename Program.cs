@@ -38,11 +38,11 @@ builder.Services.AddSwaggerGen(options=>
     });
 });
 
-builder.Services.AddAuthentication(Options =>     //this method adds authentication
+builder.Services.AddAuthentication(Options =>
 {
     Options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    Options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;    //creates different token
-}).AddJwtBearer(options =>   //takes parameter to authenticate the issuer,audience,lifetime
+    Options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
     {
@@ -50,12 +50,28 @@ builder.Services.AddAuthentication(Options =>     //this method adds authenticat
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ClockSkew = TimeSpan.Zero,
+        ClockSkew = TimeSpan.Zero, // Ensure strict time validation
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
     };
+
+    **// Add logging for token validation events**
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine($"Token validated for {context.Principal.Identity.Name}");
+            return Task.CompletedTask;
+        }
+    };
 });
+
 
 var provider = builder.Services.BuildServiceProvider();
 var config = provider.GetRequiredService<IConfiguration>();
