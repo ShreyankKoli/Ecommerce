@@ -1,79 +1,74 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
-import {FormsModule} from '@angular/forms';
 import { Router } from '@angular/router';
-
-
 
 @Component({
   selector: 'app-login',
-  standalone: false,
-  
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css'
+  styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
 
   loginObj: any = {
-    "userName": "",
-    "password": ""
+    userName: '',
+    password: ''
   };
 
-  http=inject(HttpClient);
+  http = inject(HttpClient);
 
-  constructor(private router:Router){
-   
-  }
-  
+  constructor(private router: Router) {}
 
   onLogin() {
-    const params = new HttpParams()   //HttpParams used to request certain resources from web server.
-    .set('userName',this.loginObj.userName)
-    .set('password',this.loginObj.password);
+    // Prepare HTTP request body with user credentials
+    const body = {
+      userName: this.loginObj.userName,
+      password: this.loginObj.password
+    };
 
-    let Token ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJKd3RTdWJqZWN0IiwianRpIjoiN2Y0ZDYwYjMtODA0NS00YWFlLTk0ZGQtOGJmMzJiM2M2MDNhIiwidXNlck5hbWUiOiJrYXlib2x1IiwiRmlyc3ROYW1lIjoia2F5bmFrbyIsImV4cCI6MTczNjE2NDg2MywiaXNzIjoiSnd0SXNzdWVyIiwiYXVkIjoiSnd0QXVkaWVuY2UifQ.NsfO61Mz8v8Cb3wilDO0Lj0RNGlRWWgzeaLeAVi53rs';
-    let head_obj = new HttpHeaders().set('Authorization','bearer'+Token);
-    this.http.get("https://localhost:7016/api/User/Login",{headers:head_obj , params})
-      .subscribe({
-        next: (res: any) => {
-          console.log(res);
-          if (res) {  
-            // alert("Login Success");
-            if(typeof window !== 'undefined' && window.localStorage)
-            {
-          console.log(res);
-              localStorage.setItem("login",this.loginObj.userName);
+    // Token (typically a JWT token, but can be fetched from a service or environment)
+    let token = 'your-jwt-token-here';  // Replace with actual token if needed
+
+    // Set HTTP headers with Authorization token
+    let headers = new HttpHeaders().set('Authorization', 'Bearer ' + token);
+
+    // Make the POST request to the backend API to authenticate the user
+    this.http.post('https://localhost:7016/api/User/Login', body, { headers }).subscribe({
+      next: (res: any) => {
+        console.log(res); // Log the response to check the structure
+
+        if (res) {
+          // Extract roleId from the response (based on the API response structure)
+          const roleId = res.user?.roleId; // Access roleId from 'user' in response
+          console.log("RoleId: ", roleId); // Check the roleId in the response
+
+          if (roleId) {
+            alert("Login Success");
+            localStorage.setItem('login', this.loginObj.userName); // Store username in localStorage
+            localStorage.setItem('roleId', roleId); // Store roleId in localStorage
+
+            // Redirect based on roleId
+            switch (roleId) {
+              case 100:
+                this.router.navigate(['/dashboard']); // Redirect to Admin Dashboard
+                break;
+              case 101:
+                this.router.navigate(['/adminDashboard']); // Redirect to Admin Dashboard
+                break;
+              case 102:
+                this.router.navigate(['/sellerDashboard']); // Redirect to Seller Dashboard
+                break;
+              default:
+                alert("Contact Customer Support"); // Default case if no matching roleId
             }
-
-            const roldeId = res.data?.roleId || res.roleId;
-            if(roldeId){
-              alert("Login Success");
-            localStorage.setItem("roleId",roldeId)
-             //this.router.navigate(['/dashboard']);
-            
-              switch(roldeId){
-                case 100:
-                  this.router.navigate(['/dashboard']);
-                  break;
-                case 101:
-                    this.router.navigate(['/adminDashboard']);
-                    break;
-                case 102:
-                  this.router.navigate(['/sellerDashboard']);
-                  break;
-                 default:
-                  alert("Contact Customer Support"); 
-              }
-             }
-          } else {
-            alert("Login Failed: " + res.message);
           }
-        },
-        error: (err) => {
-          console.error(err);
-          alert("An error occurred: " + (err.error?.message || "Please try again later."));
+        } else {
+          alert("Login Failed: " + res.message); // Handle failed login
         }
-      });
+      },
+      error: (err) => {
+        console.error(err);
+        alert("An error occurred: " + (err.error?.message || "Please try again later.")); // Error handling
+      }
+    });
   }
 }
-
