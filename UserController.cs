@@ -68,7 +68,7 @@ namespace Ecommerce.Controllers
         }
 
       
-       [AllowAnonymous] // Allow login without authentication
+    [AllowAnonymous] // Allow login without authentication
 [HttpPost("Login")]
 public async Task<IActionResult> Login(string username, string password)
 {
@@ -89,13 +89,13 @@ public async Task<IActionResult> Login(string username, string password)
         return Unauthorized("Invalid password.");
     }
 
-    **// Generate JWT token**
-    var claims = new[]
-    {
+    // Generate JWT token with RoleId
+    var claims = new[] {
         new Claim(JwtRegisteredClaimNames.Sub, configuration["Jwt:Subject"]),
         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         new Claim("userName", user.UserName),
-        new Claim("FirstName", user.FirstName ?? "")
+        new Claim("FirstName", user.FirstName ?? ""),
+        new Claim("RoleId", user.RoleId.ToString()) // Add RoleId as a claim
     };
 
     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
