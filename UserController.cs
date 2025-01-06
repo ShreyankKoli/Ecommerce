@@ -68,48 +68,49 @@ namespace Ecommerce.Controllers
         }
 
       
-        [HttpPost]
-        public async Task<ActionResult> PostUser(User user)
-        {   
-            if (string.IsNullOrWhiteSpace(user.UserName) || string.IsNullOrWhiteSpace(user.Password))
-            {
-                return BadRequest("UserName or Password cannot be null or empty.");
-            }
-            try
-            {
-                if (user.UserName != null)
-                {
-                    var claims = new[]
-                    {
-                    new Claim(JwtRegisteredClaimNames.Sub, configuration["Jwt:Subject"]),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim("userName", user.UserName.ToString()),
-                    new Claim("FirstName", user.FirstName.ToString())
+       [AllowAnonymous] // Allow login without authentication
+[HttpPost("Login")]
+public async Task<IActionResult> Login(string username, string password)
+{
+    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+    {
+        return BadRequest("Username and password are required.");
+    }
 
-                };
-                    var Key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
-                    var signIn = new SigningCredentials(Key, SecurityAlgorithms.HmacSha256);
-                    var token = new JwtSecurityToken(configuration["Jwt:Issuer"],
-                        configuration["Jwt:Audience"],
-                        claims,
-                        expires: DateTime.Now.AddDays(1),
-                        signingCredentials: signIn
-                        );
-                    string tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
+    var user = await context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+    if (user == null)
+    {
+        return NotFound("User not found.");
+    }
 
-                    user.Password = _passwordHasher.HashPassword(user, user.Password);
-                    await context.Users.AddAsync(user);
-                    await context.SaveChangesAsync();
+    var result = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
+    if (result == PasswordVerificationResult.Failed)
+    {
+        return Unauthorized("Invalid password.");
+    }
 
-                    return Ok(new { Token = tokenValue, result = true, message = "User added successfully", user });
-                    //return Ok(new { result = true, message = "User added successfully", user });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { result = false, message = "Internal Server Error", error = ex.Message });
-            }
-        }
+    **// Generate JWT token**
+    var claims = new[]
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, configuration["Jwt:Subject"]),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        new Claim("userName", user.UserName),
+        new Claim("FirstName", user.FirstName ?? "")
+    };
+
+    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
+    var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+    var token = new JwtSecurityToken(
+        configuration["Jwt:Issuer"],
+        configuration["Jwt:Audience"],
+        claims,
+        expires: DateTime.UtcNow.AddDays(1),
+        signingCredentials: signIn
+    );
+
+    var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
+    return Ok(new { Token = tokenValue, Message = "Login Successful", User = user });
+}
 
    
 
