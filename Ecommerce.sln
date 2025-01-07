@@ -1,22 +1,65 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ecommerce", "Ecommerce\Ecommerce.csproj", "{3D91B8A0-92AE-47CC-8659-EB333F3A263E}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{3D91B8A0-92AE-47CC-8659-EB333F3A263E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3D91B8A0-92AE-47CC-8659-EB333F3A263E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3D91B8A0-92AE-47CC-8659-EB333F3A263E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3D91B8A0-92AE-47CC-8659-EB333F3A263E}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-EndGlobal
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
+{
+    private readonly IConfiguration _configuration;
+
+    public UserController(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    [HttpPost("upload-image")]
+    public async Task<IActionResult> UploadImage([FromForm] ImageUploadRequest request)
+    {
+        if (request.ImageFile == null || request.ImageFile.Length == 0)
+        {
+            return BadRequest("No image file provided.");
+        }
+
+        try
+        {
+            // Convert the uploaded image file to a byte array
+            byte[] imgBytes;
+            using (var ms = new MemoryStream())
+            {
+                await request.ImageFile.CopyToAsync(ms);
+                imgBytes = ms.ToArray();
+            }
+
+            // Update the database with ImgName and ImgSize
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqlConnection(connectionString))
+            {
+                string query = @"
+                    UPDATE [User]
+                    SET ImgName = @ImgName, ImgSize = @ImgSize
+                    WHERE UserId = @UserId";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", request.UserId);
+                    command.Parameters.AddWithValue("@ImgName", request.ImgName ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@ImgSize", imgBytes ?? (object)DBNull.Value);
+
+                    connection.Open();
+                    int rowsAffected = await command.ExecuteNonQueryAsync();
+                    connection.Close();
+
+                    if (rowsAffected > 0)
+                    {
+                        return Ok("Image uploaded and stored successfully.");
+                    }
+                    else
+                    {
+                        return NotFound("User not found.");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
+}
