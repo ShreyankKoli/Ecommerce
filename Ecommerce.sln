@@ -1,52 +1,35 @@
-[ApiController]
-[Route("api/[controller]")]
-public class UserController : ControllerBase
-{
-    private readonly ApplicationDbContext _context;
+ [HttpPost("Image")]
+ public async Task<ActionResult> Create(User user)
+ {
+     if (user.UserName == null)
+     {
+         return Content("Invalid Submission");
+     }
 
-    public UserController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
+     var userModel = new User
+     {
+         FirstName = user.FirstName,
+         LastName = user.LastName,
+         RoleId = user.RoleId,
+         ImgName = user.ImgName
+     };
+     context.Users.Add(userModel);
+     await context.SaveChangesAsync();
+     var lastUserId = userModel.UserId;
 
-    [HttpPost("upload-image")]
-    public async Task<IActionResult> UploadImage([FromForm] ImageUploadRequest request)
-    {
-        if (request.ImageFile == null || request.ImageFile.Length == 0)
-        {
-            return BadRequest("No image file provided.");
-        }
+     foreach (var item in user.ImgName)
+     {
+         if (item.FileName == null || item.FileName.Length == 0)
+         {
+             return Content("File Not Selected");
+         }
 
-        // Find the user in the database
-        var user = await _context.Users.FindAsync(request.UserId);
-        if (user == null)
-        {
-            return NotFound("User not found.");
-        }
+         using (FileStream stream = new FileStream(path, (FileAccess)FileMode.Create))
+         {
+             await item.CopyToAsync(stream);
+             stream.Close();
+         }
 
-        try
-        {
-            // Convert the image file to a byte array
-            byte[] imgBytes;
-            using (var ms = new MemoryStream())
-            {
-                await request.ImageFile.CopyToAsync(ms);
-                imgBytes = ms.ToArray();
-            }
-
-            // Update user with image data
-            user.ImgName = request.ImgName;
-            user.ImgSize = imgBytes;
-
-            // Save changes to the database
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-
-            return Ok("Image uploaded and stored successfully.");
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal server error: {ex.Message}");
-        }
-    }
-}
+     }
+     return Ok(userModel);
+ }
