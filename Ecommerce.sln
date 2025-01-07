@@ -1,35 +1,57 @@
- [HttpPost("Image")]
- public async Task<ActionResult> Create(User user)
- {
-     if (user.UserName == null)
-     {
-         return Content("Invalid Submission");
-     }
+[HttpPost("Image")]
+public async Task<IActionResult> Create([FromForm] User user)
+{
+    if (string.IsNullOrEmpty(user.UserName))
+    {
+        return BadRequest("Invalid Submission");
+    }
 
-     var userModel = new User
-     {
-         FirstName = user.FirstName,
-         LastName = user.LastName,
-         RoleId = user.RoleId,
-         ImgName = user.ImgName
-     };
-     context.Users.Add(userModel);
-     await context.SaveChangesAsync();
-     var lastUserId = userModel.UserId;
+    // Validate if ImgName is provided
+    if (user.ImgName == null || !user.ImgName.Any())
+    {
+        return BadRequest("No files selected.");
+    }
 
-     foreach (var item in user.ImgName)
-     {
-         if (item.FileName == null || item.FileName.Length == 0)
-         {
-             return Content("File Not Selected");
-         }
+    // Create a new user model to save user details (excluding the file here)
+    var userModel = new User
+    {
+        FirstName = user.FirstName,
+        LastName = user.LastName,
+        RoleId = user.RoleId
+    };
 
-         using (FileStream stream = new FileStream(path, (FileAccess)FileMode.Create))
-         {
-             await item.CopyToAsync(stream);
-             stream.Close();
-         }
+    context.Users.Add(userModel);
+    await context.SaveChangesAsync();
 
-     }
-     return Ok(userModel);
- }
+    // Define the path to save uploaded files
+    var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+    if (!Directory.Exists(uploadPath))
+    {
+        Directory.CreateDirectory(uploadPath);
+    }
+
+    // Process each uploaded file
+    foreach (var file in user.ImgName)
+    {
+        if (file.Length > 0)
+        {
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+            var filePath = Path.Combine(uploadPath, uniqueFileName);
+
+            // Save the file
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Update the user model with the file name
+            userModel.ImgName += uniqueFileName + ";"; // Assuming `ImgName` stores file names as a semicolon-separated string
+        }
+    }
+
+    // Update the database with the file information
+    context.Users.Update(userModel);
+    await context.SaveChangesAsync();
+
+    return Ok(userModel);
+}
