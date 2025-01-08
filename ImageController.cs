@@ -64,3 +64,25 @@ namespace Ecommmerce.Controllers
     }
 }
 
+[HttpGet("get/all")]
+public IActionResult GetAllImages()
+{
+    var images = _context.Images.ToList();
+
+    if (!images.Any())
+    {
+        return NotFound("No images found.");
+    }
+
+    // Return a list of image data (e.g., IDs, names, or other metadata)
+    var imageList = images.Select(i => new
+    {
+        i.ImageId,
+        i.ImageName, // Assuming ImageName exists in your model
+        ImageUrl = Url.Action(nameof(GetImage), new { id = i.ImageId }) // Generate URLs for each image
+    }).ToList();
+
+    return Ok(imageList);
+}
+
+
