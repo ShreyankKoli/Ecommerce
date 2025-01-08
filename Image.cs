@@ -1,15 +1,44 @@
-﻿namespace Ecommmerce.Models
-{
-    public partial class Image
-    {
-        public int ImageId { get; set; }
+import { Component, OnInit } from '@angular/core';
+import { ServiceService } from '../../../service/service.service';
+import { URL } from 'url';
+import { environment } from '../../../../environments/environment';
+import { Model } from '../../../service/model.model';
 
-        public int RoleId { get; set; } // Change to non-nullable type if RoleId is required
+@Component({
+  selector: 'app-seller-form',
+  standalone: false,
 
-        public string ImageName { get; set; } = null!;
+  templateUrl: './seller-form.component.html',
+  styleUrl: './seller-form.component.css'
+})
+export class SellerFormComponent implements OnInit {
+  base64: any;
+model: any;
 
-        public byte[] ImageData { get; set; } = null!;
+  constructor(public service: ServiceService) { }
 
-        public virtual UserRole Role { get; set; }
-    }
+  ngOnInit(): void {
+    this.service.getImage()
+      .subscribe({
+        next: res => {
+          this.service.list = res as Model[];
+          console.log(res);
+        },
+        error: err => {
+          console.error(err);
+        }
+      })
+
+  }
+
+
 }
+<tr *ngFor="let img of service.list">
+                    <th>{{img.userId}}</th>
+                    <th>{{img.roleId}}</th>
+                    <th>{{img.imageId}}</th>
+                    <th>{{img.imageName}}</th>
+                    <th>{{img.imageDescription}}</th>
+                    <th>{{img.price}}</th>
+                    <th><img [src]="img.imageData"></th>
+                    <th>{{img.imageData}}</th>
