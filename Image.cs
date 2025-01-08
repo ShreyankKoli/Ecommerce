@@ -4,45 +4,60 @@ import { Model } from '../../../service/model.model';
 
 @Component({
   selector: 'app-seller-form',
-  standalone: false,
   templateUrl: './seller-form.component.html',
-  styleUrls: ['./seller-form.component.css'] // Fixed typo from "styleUrl" to "styleUrls"
+  styleUrls: ['./seller-form.component.css'], // Fixed typo from "styleUrl" to "styleUrls"
 })
 export class SellerFormComponent implements OnInit {
-  base64Images: { [key: string]: string } = {}; // Store base64 strings
-  model: any;
+  base64Images: { [key: string]: string } = {}; // Store base64 strings for each image
+  model: Model[] = []; // Hold the list of models
 
   constructor(public service: ServiceService) {}
 
   ngOnInit(): void {
     this.service.getImage().subscribe({
       next: (res) => {
-        this.service.list = res as Model[];
+        this.model = res as Model[]; // Cast the response to an array of Model
         console.log(res);
 
-        // Convert each image to base64
-        this.service.list.forEach((img) => {
-          this.convertToBase64(img.imageData, img.imageId);
+        // Convert each image's binary data to a base64 string
+        this.model.forEach((img) => {
+          if (img.imageData) {
+            this.convertToBase64(img.imageData, img.imageId);
+          }
         });
       },
       error: (err) => {
-        console.error(err);
+        console.error('Error fetching images:', err);
       },
     });
   }
 
-  
-
-  // Function to convert image byte data to base64
+  // Function to convert binary image data to a base64 string
   convertToBase64(imageData: any, imageId: string): void {
-    const byteArray = new Uint8Array(imageData);
-    const binaryString = byteArray.reduce((data, byte) => data + String.fromCharCode(byte), '');
-    const base64String = btoa(binaryString);
+    // Check if the imageData is already a Blob or ArrayBuffer
+    if (imageData instanceof Blob || imageData instanceof ArrayBuffer) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = reader.result as string;
+        this.base64Images[imageId] = base64String; // Store the base64 string with the imageId
+      };
+      reader.onerror = (error) => {
+        console.error('Error converting image to base64:', error);
+      };
 
-    // Store the base64 string with its respective ID
-    this.base64Images[imageId] = `data:image/png;base64,${base64String}`;
+      reader.readAsDataURL(new Blob([imageData]));
+    } else {
+      console.warn('Invalid image data format for imageId:', imageId);
+    }
   }
 }
+
+<div *ngFor="let img of model">
+  <h3>{{ img.name }}</h3>
+  <img *ngIf="base64Images[img.imageId]" [src]="base64Images[img.imageId]" alt="{{ img.name }}" />
+</div>
+
+
 <table>
   <tr *ngFor="let img of service.list">
     <td>{{ img.userId }}</td>
