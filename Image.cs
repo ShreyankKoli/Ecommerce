@@ -26,7 +26,7 @@ import { Model } from '../../../service/model.model';
   styleUrls: ['./seller-form.component.css'],
 })
 export class SellerFormComponent implements OnInit {
-  base64Images: { [key: string]: string } = {}; // Store base64 strings for each image
+  base64Images: { [key: number]: string } = {}; // Store base64 strings with imageId as number
   model: Model[] = []; // Hold the list of models
 
   constructor(public service: ServiceService) {}
@@ -51,7 +51,7 @@ export class SellerFormComponent implements OnInit {
   }
 
   // Convert image data to base64 format
-  convertToBase64(imageData: any, imageId: string): void {
+  convertToBase64(imageData: any, imageId: number): void {
     const reader = new FileReader();
     reader.onload = () => {
       this.base64Images[imageId] = reader.result as string;
