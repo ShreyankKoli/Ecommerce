@@ -1,87 +1,62 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ServiceService } from '../../../service/service.service';
-import { Model } from '../../../service/model.model';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
-export class DashboardComponent implements OnInit {
-  base64Images: { [key: number]: string } = {};
-  model: Model[] = [];
+export class DashboardComponent {
+  selectedFile: File | null = null;
 
   constructor(private service: ServiceService) {}
 
-  ngOnInit(): void {
-    this.fetchImages();
+  onFileSelected(event: any): void {
+    this.selectedFile = event.target.files[0];
   }
 
-  fetchImages(): void {
-    this.service.getImage().subscribe({
-      next: (res) => {
-        this.model = res as Model[];
-        this.model.forEach((img) => {
-          if (img.imageData) {
-            this.convertImageToBase64(img.imageData, img.imageId);
-          }
-        });
-      },
-      error: (err) => {
-        console.error('Error fetching images:', err);
-      },
-    });
-  }
+  uploadImage(): void {
+    if (!this.selectedFile) {
+      console.error('No file selected!');
+      return;
+    }
 
-  convertImageToBase64(imageData: any, imageId: number): void {
     const reader = new FileReader();
     reader.onload = () => {
-      this.base64Images[imageId] = reader.result as string;
-    };
-    reader.onerror = (error) => {
-      console.error('Error converting image to base64:', error);
+      const base64Image = reader.result;
+      const imageData = {
+        userId: 1, // Replace with actual userId
+        roleId: 2, // Replace with actual roleId
+        imageName: this.selectedFile?.name,
+        imageDescription: 'Sample image description', // Add your description
+        price: 100, // Replace with actual price
+        imageData: base64Image,
+      };
+
+      this.service.postImage(imageData).subscribe({
+        next: (res) => {
+          console.log('Image uploaded successfully:', res);
+        },
+        error: (err) => {
+          console.error('Error uploading image:', err);
+        },
+      });
     };
 
-    // Check if imageData is already a Blob; otherwise, create a new Blob
-    const blob = imageData instanceof Blob ? imageData : new Blob([imageData]);
-    reader.readAsDataURL(blob);
+    reader.readAsDataURL(this.selectedFile);
   }
 }
 
-<h1>Hello Seller</h1>
-<div class="row">
-  <div class="col-12">
-    <table class="table table-bordered table-secondary">
-      <thead>
-        <tr>
-          <th>userId</th>
-          <th>roleId</th>
-          <th>imageId</th>
-          <th>imageName</th>
-          <th>imageDescription</th>
-          <th>price</th>
-          <th>image</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let img of model">
-          <td>{{ img.userId }}</td>
-          <td>{{ img.roleId }}</td>
-          <td>{{ img.imageId }}</td>
-          <td>{{ img.imageName }}</td>
-          <td>{{ img.imageDescription }}</td>
-          <td>{{ img.price }}</td>
-          <td>
-            <img
-              *ngIf="base64Images[img.imageId]"
-              [src]="base64Images[img.imageId]"
-              alt="{{ img.imageName }}"
-              style="width: 100px; height: auto;"
-            />
-          </td>
-        </tr>
-      </tbody>
-    </table>
+<h1>Upload Image</h1>
+
+<div class="row mt-4">
+  <div class="col-6">
+    <input type="file" (change)="onFileSelected($event)" class="form-control" />
+  </div>
+  <div class="col-6">
+    <button class="btn btn-primary" (click)="uploadImage()">Upload Image</button>
   </div>
 </div>
+
+
 
