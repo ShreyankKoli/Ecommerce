@@ -12,7 +12,7 @@ export class ImageService {
 
   uploadImage(file: File, roleId: number, imageName: string): Observable<any> {
     const formData = new FormData();
-    formData.append('File', file); // Matches the DTO property name
+    formData.append('File', file); // 'File' matches the API's DTO property name
     formData.append('RoleId', roleId.toString());
     formData.append('ImageName', imageName);
 
@@ -64,6 +64,7 @@ export class ImageUploadComponent {
   }
 }
 
+
 <div class="image-upload-container">
   <h2>Upload Image</h2>
   <form (submit)="onUpload()">
@@ -95,6 +96,7 @@ export class ImageUploadComponent {
   </form>
   <p>{{ uploadMessage }}</p>
 </div>
+
 
 
 
