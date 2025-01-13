@@ -1,30 +1,19 @@
-import { Component,OnInit, SecurityContext } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ServiceService } from '../../../service/service.service';
 import { Model } from '../../../service/model.model';
-import { NgFor,NgStyle } from '@angular/common';
-import { DomSanitizer,SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: false,
-  
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit {
-  //base64Images: { [key: number]: string } = {};
   model: Model[] = [];
-  cartCount:number=0;
-  loggedObj: any=[];
+  cartCount: number = 0;
 
-  constructor(private service: ServiceService, public router: Router) {
-    const localData = localStorage.getItem('login');
-    if(localData != null){
-      
-      //alert('localstorage is not null')
-    }
-  }
+  constructor(private service: ServiceService, public router: Router) {}
 
   ngOnInit(): void {
     this.fetchImages();
@@ -35,65 +24,51 @@ export class DashboardComponent implements OnInit {
       next: (res) => {
         this.model = res as Model[];
         console.log(res);
-        // this.model.forEach((img) => {
-        //   if (img.imageData) {
-        //     this.convertImageToBase64(img.imageData, img.imageId);
-        //   }
-        // });
       },
       error: (err) => {
         console.error('Error fetching images:', err);
-      },
+      }
     });
   }
 
-  // addCart(imageId:any){
-  //   console.log(imageId);
-  //   this.cartCount += 1;
-  // }
+  addCart(imageId: number): void {
+    const localData = localStorage.getItem('login');
+    const userData = localData ? JSON.parse(localData) : null;
+    const userId = userData?.id || 0;
 
-  // SendData(imageId:any):void{
-  //   this.service.sharedData(this.model);
-  //   this.router.navigate(['/cart']);
-  // }
-
-  addCart(imageId:number){
-    const obj ={
-      "cartId": 0,
-      "imageId": imageId,
-      "roleId": 102,
-      "userId": 45,
-      "quantity": 1
+    if (userId === 0) {
+      alert('User not logged in. Please log in to add items to the cart.');
+      this.router.navigate(['/login']);
+      return;
     }
-    this.service.addToCart(obj).subscribe((res:any)=>{
-      alert("data added");
-        this.service.sharedData(obj);
+
+    const cartObj = {
+      cartId: 0,
+      imageId: imageId,
+      roleId: 102,
+      userId: userId,
+      quantity: 1
+    };
+
+    this.service.addToCart(cartObj).subscribe({
+      next: (res: any) => {
+        alert('Item added to cart successfully!');
+        this.service.sharedData(cartObj);
         this.router.navigate(['/cart']);
-      // this.loggedObj = res.model;
-      // localStorage.setItem('app_user',JSON.stringify(res.model));
-    })
+      },
+      error: (err: any) => {
+        console.error('Error adding item to cart:', err);
+        alert('Failed to add item to cart. Please try again later.');
+      }
+    });
   }
-
-  removeCart(imageId:any){
-    if(this.cartCount >= 1){
-      this.cartCount -= 1;
-      console.log(imageId);
-    }
-  }
-
-
-
-  // convertImageToBase64(imageData: any, imageId: number): void {
-  //   const reader = new FileReader();
-  //   reader.onload = () => {
-  //     this.base64Images[imageId] = reader.result as string;
-  //   };
-  //   reader.onerror = (error) => {
-  //     console.error('Error converting image to base64:', error);
-  //   };
-    
-  //   const blob = imageData instanceof Blob ? imageData : new Blob([imageData]);
-  //   reader.readAsDataURL(blob);
-  // }
-
 }
+
+<div *ngFor="let item of model">
+  <div>
+    <h3>{{ item.name }}</h3>
+    <button (click)="addCart(item.imageId)">Add to Cart</button>
+  </div>
+</div>
+
+
