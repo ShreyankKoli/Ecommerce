@@ -7,13 +7,12 @@ import { Router } from '@angular/router';
   selector: 'app-cart',
   standalone: false,
   templateUrl: './cart.component.html',
-  styleUrl: './cart.component.css'
+  styleUrls: ['./cart.component.css']
 })
 export class CartComponent implements OnInit {
   cartItems: Model[] = [];
   totalPrice: number = 0;
-  cart: cart[] = [];
-  public displayedColumns: string[] = ["name", "description", "price", "imageData", "Action"];
+  public displayedColumns: string[] = ["name", "description", "price", "imageData", "quantity", "Action"];
 
   constructor(public router: Router, public service: ServiceService) { }
 
@@ -33,51 +32,39 @@ export class CartComponent implements OnInit {
     );
   }
 
-  loadCartItems(): void {
-    const userId = localStorage.getItem('userId'); // Fetch userId from localStorage
-    if (!userId) {
-      alert("No data in cart");
-      return;
-    }
-    this.service.getCartData().subscribe(
-      (items: Model[]) => {
-        this.cartItems = items;
-        this.calculateTotal();
-      },
-      () => alert("Failed to load cart items")
-    );
-  }
-
-  getCardDetails(id: number): void {
-    const userId = localStorage.getItem('userId'); 
-    if (!userId) {
-      alert("No user logged in");
-      return;
-    }
-
-    this.service.getAddToCart(userId).subscribe(
-      (res: Model[]) => {
-        this.cartItems = res; // Update cart items
-        this.calculateTotal(); // Recalculate total price
-      },
-      () => alert("Failed to get item details")
-    );
-  }
-
   calculateTotal(): void {
-    this.totalPrice = this.cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    this.totalPrice = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   }
 
-  updateQuantity(img: any, quantity: number): void {
+  updateQuantity(img: Model, quantity: number): void {
     if (quantity < 1) return;
 
     img.quantity = quantity;
     this.calculateTotal();
+
+    // Optionally, update the quantity in the backend
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      this.service.updateCartItemQuantity(userId, img.cartId, quantity).subscribe(
+        () => console.log(`Updated quantity for cart item ${img.cartId}`),
+        (err) => console.error("Error updating quantity:", err)
+      );
+    }
   }
 
   removeItem(index: number): void {
+    const itemId = this.cartItems[index].cartId;
     this.cartItems.splice(index, 1);
     this.calculateTotal();
+
+    // Optionally, remove the item from the backend
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      this.service.removeItemFromCart(userId, itemId).subscribe(
+        () => console.log(`Item ${itemId} removed from cart`),
+        (err) => console.error("Error removing item:", err)
+      );
+    }
   }
 
   home(): void {
