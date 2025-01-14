@@ -1,4 +1,4 @@
-import { Component, numberAttribute, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ServiceService } from '../../../service/service.service';
 import { cart, Model } from '../../../service/model.model';
 import { Router } from '@angular/router';
@@ -6,41 +6,36 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-cart',
   standalone: false,
-
   templateUrl: './cart.component.html',
   styleUrl: './cart.component.css'
 })
 export class CartComponent implements OnInit {
   cartItems: Model[] = [];
   totalPrice: number = 0;
-  cart: cart[]=[];
-  id: any=45;
-  public displayedColumns: string[] =["name","description","price","imageData","Action"];
-
+  cart: cart[] = [];
+  public displayedColumns: string[] = ["name", "description", "price", "imageData", "Action"];
 
   constructor(public router: Router, public service: ServiceService) { }
 
   ngOnInit(): void {
-    this.service.getAddToCart(this.id).subscribe(
-      (res: any) => {
-        console.log("Hello",res);
-        this.router.navigate(['/cart']);
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-          alert("No items in cart for this user");
-        } else {
-          this.service.cart = res as cart[];
-          this.loadCartItems();
-        }
+    const userId = localStorage.getItem('userId'); // Fetch userId from localStorage
+    if (!userId) {
+      alert("No user logged in");
+      return;
+    }
+
+    this.service.getAddToCart(userId).subscribe(
+      (res: Model[]) => {
+        this.cartItems = res; // Store fetched cart items
+        this.calculateTotal(); // Calculate total price of cart items
       },
-      () => alert("Failed to get item details")
+      () => alert("Failed to get cart items for this user")
     );
-    this.loadCartItems();
   }
-  
+
   loadCartItems(): void {
     const userId = localStorage.getItem('userId'); // Fetch userId from localStorage
-    if (!userId){
+    if (!userId) {
       alert("No data in cart");
       return;
     }
@@ -52,26 +47,6 @@ export class CartComponent implements OnInit {
       () => alert("Failed to load cart items")
     );
   }
-  
-  // getCardDetails(id: number): void {
-  //   const userId = localStorage.getItem('userId'); 
-  //   if (!userId) {
-  //     alert("No user logged in");
-  //     return;
-  //   }
-  //   this.service.getAddToCart(id).subscribe(
-  //     (res: any) => {
-  //       console.log("Hello",res);
-  //       const userId = localStorage.getItem('userId');
-  //       if (res.id != userId) {
-  //         alert("No items in cart for this user");
-  //       } else {
-  //         this.loadCartItems();
-  //       }
-  //     },
-  //     () => alert("Failed to get item details")
-  //   );
-  // }
 
   getCardDetails(id: number): void {
     const userId = localStorage.getItem('userId'); 
@@ -79,22 +54,15 @@ export class CartComponent implements OnInit {
       alert("No user logged in");
       return;
     }
-    this.service.getAddToCart(id).subscribe(
-      (res: any) => {
-        console.log("Hello",res);
-        this.router.navigate(['/cart']);
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-          alert("No items in cart for this user");
-        } else {
-          this.service.cart = res as cart[];
-          //this.loadCartItems();
-        }
+
+    this.service.getAddToCart(userId).subscribe(
+      (res: Model[]) => {
+        this.cartItems = res; // Update cart items
+        this.calculateTotal(); // Recalculate total price
       },
       () => alert("Failed to get item details")
     );
   }
-  
 
   calculateTotal(): void {
     this.totalPrice = this.cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -107,23 +75,19 @@ export class CartComponent implements OnInit {
     this.calculateTotal();
   }
 
-  removeItem(index: number) {
-    // this.cartItems = this.cartItems.filter(item => item.imageId !== itemId);
-    // this.calculateTotal();
+  removeItem(index: number): void {
     this.cartItems.splice(index, 1);
     this.calculateTotal();
   }
 
-  home() {
+  home(): void {
     this.router.navigate(['/dashboard']);
   }
 
-  onLogOut() {
+  onLogOut(): void {
     localStorage.removeItem("login");
     localStorage.removeItem("roleId");
     localStorage.removeItem("userId");
     this.router.navigate(["/login"]);
-    //window.location.reload();
   }
-
 }
