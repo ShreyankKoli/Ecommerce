@@ -77,8 +77,9 @@ export class ServiceService {
     return this.http.post('https://localhost:7016/api/User/addToCart',obj)
   }
 
-  getAddToCart(id:any):Observable<Model[]>{
-    return this.http.get<Model[]>('https://localhost:7016/api/User/CardID'+id);
-  }
+ getAddToCart(userId: any): Observable<Model[]> {
+  return this.http.get<Model[]>(`https://localhost:7016/api/User/getCartItemsByUserId/${userId}`);
+}
+
 
 }
