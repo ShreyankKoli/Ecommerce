@@ -1,37 +1,129 @@
-addCart(item: Model): void { 
-  const localData = localStorage.getItem('login');
-  const userData = localData ? JSON.parse(localData) : null;
-  const userId = userData?.id || 0;
+import { Component, numberAttribute, OnInit } from '@angular/core';
+import { ServiceService } from '../../../service/service.service';
+import { cart, Model } from '../../../service/model.model';
+import { Router } from '@angular/router';
 
-  if (userId === 0) {
-    alert('User not logged in. Please log in to add items to the cart.');
-    this.router.navigate(['/login']);
-    return;
+@Component({
+  selector: 'app-cart',
+  standalone: false,
+
+  templateUrl: './cart.component.html',
+  styleUrl: './cart.component.css'
+})
+export class CartComponent implements OnInit {
+  cartItems: Model[] = [];
+  totalPrice: number = 0;
+  cart: cart[]=[];
+  id: any=45;
+  public displayedColumns: string[] =["name","description","price","imageData","Action"];
+
+
+  constructor(public router: Router, public service: ServiceService) { }
+
+  ngOnInit(): void {
+    this.service.getAddToCart(this.id).subscribe(
+      (res: any) => {
+        console.log("Hello",res);
+        this.router.navigate(['/cart']);
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+          alert("No items in cart for this user");
+        } else {
+          this.service.cart = res as cart[];
+          this.loadCartItems();
+        }
+      },
+      () => alert("Failed to get item details")
+    );
+    this.loadCartItems();
+  }
+  
+  loadCartItems(): void {
+    const userId = localStorage.getItem('userId'); // Fetch userId from localStorage
+    if (!userId){
+      alert("No data in cart");
+      return;
+    }
+    this.service.getCartData().subscribe(
+      (items: Model[]) => {
+        this.cartItems = items;
+        this.calculateTotal();
+      },
+      () => alert("Failed to load cart items")
+    );
+  }
+  
+  // getCardDetails(id: number): void {
+  //   const userId = localStorage.getItem('userId'); 
+  //   if (!userId) {
+  //     alert("No user logged in");
+  //     return;
+  //   }
+  //   this.service.getAddToCart(id).subscribe(
+  //     (res: any) => {
+  //       console.log("Hello",res);
+  //       const userId = localStorage.getItem('userId');
+  //       if (res.id != userId) {
+  //         alert("No items in cart for this user");
+  //       } else {
+  //         this.loadCartItems();
+  //       }
+  //     },
+  //     () => alert("Failed to get item details")
+  //   );
+  // }
+
+  getCardDetails(id: number): void {
+    const userId = localStorage.getItem('userId'); 
+    if (!userId) {
+      alert("No user logged in");
+      return;
+    }
+    this.service.getAddToCart(id).subscribe(
+      (res: any) => {
+        console.log("Hello",res);
+        this.router.navigate(['/cart']);
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+          alert("No items in cart for this user");
+        } else {
+          this.service.cart = res as cart[];
+          //this.loadCartItems();
+        }
+      },
+      () => alert("Failed to get item details")
+    );
+  }
+  
+
+  calculateTotal(): void {
+    this.totalPrice = this.cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   }
 
-  // Get specific data for the clicked item (if needed for further validation)
-  const localStorageItems = localStorage.getItem('items'); // Assuming localStorage contains 'items' array
-  const parsedItems = localStorageItems ? JSON.parse(localStorageItems) : [];
-  const clickedItem = parsedItems.find((data: any) => data.id === item.id);
+  updateQuantity(img: any, quantity: number): void {
+    if (quantity < 1) return;
 
-  if (!clickedItem) {
-    alert('Item not found in local storage.');
-    return;
+    img.quantity = quantity;
+    this.calculateTotal();
   }
 
-  // Prepare the cart object
-  const cartObj = {
-    ...clickedItem, // Include all details from the clicked item
-    userId: userId,
-    quantity: 1 // Default quantity
-  };
+  removeItem(index: number) {
+    // this.cartItems = this.cartItems.filter(item => item.imageId !== itemId);
+    // this.calculateTotal();
+    this.cartItems.splice(index, 1);
+    this.calculateTotal();
+  }
 
-  // Add the cartObj to the user's cart (localStorage or API call)
-  const cartData = localStorage.getItem('cart');
-  const cart = cartData ? JSON.parse(cartData) : [];
-  cart.push(cartObj);
+  home() {
+    this.router.navigate(['/dashboard']);
+  }
 
-  // Update the cart in localStorage
-  localStorage.setItem('cart', JSON.stringify(cart));
-  alert('Item added to cart successfully!');
+  onLogOut() {
+    localStorage.removeItem("login");
+    localStorage.removeItem("roleId");
+    localStorage.removeItem("userId");
+    this.router.navigate(["/login"]);
+    //window.location.reload();
+  }
+
 }
