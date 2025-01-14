@@ -1,43 +1,37 @@
-import { Component, OnInit } from '@angular/core';
-import { ServiceService } from '../../../service/service.service';
-import { Model } from '../../../service/model.model';
-import { Router } from '@angular/router';
+addCart(item: Model): void { 
+  const localData = localStorage.getItem('login');
+  const userData = localData ? JSON.parse(localData) : null;
+  const userId = userData?.id || 0;
 
-@Component({
-  selector: 'app-cart',
-  standalone: false,
-  
-  templateUrl: './cart.component.html',
-  styleUrl: './cart.component.css'
-})
-export class CartComponent implements OnInit {
-  data:Model[] = [];
-  public dataSource: any = [];
-  public displayedColumns: string[] = ["imageName", "imageDescription", "price", "imageData","Action"];
-  loggedObj: any={};
-  cartItems: any[] =[]
-
-  constructor(public router: Router, public service: ServiceService){
-    const localData = localStorage.getItem("login");
-    if(localData != null){
-      // const parseObj = JSON.parse(localData);
-      // this.loggedObj = parseObj;
-      this.getCartData(this.loggedObj.userId);
-    }
+  if (userId === 0) {
+    alert('User not logged in. Please log in to add items to the cart.');
+    this.router.navigate(['/login']);
+    return;
   }
 
-  ngOnInit(): void {
-    this.data = this.service.getData();
-    console.log(this.data);
+  // Get specific data for the clicked item (if needed for further validation)
+  const localStorageItems = localStorage.getItem('items'); // Assuming localStorage contains 'items' array
+  const parsedItems = localStorageItems ? JSON.parse(localStorageItems) : [];
+  const clickedItem = parsedItems.find((data: any) => data.id === item.id);
+
+  if (!clickedItem) {
+    alert('Item not found in local storage.');
+    return;
   }
 
-  getCartData(id:number){
-    this.service.getAddToCart(id)
-    .subscribe((res:any)=>{
-      this.cartItems = res.model;
-    })
-  }
+  // Prepare the cart object
+  const cartObj = {
+    ...clickedItem, // Include all details from the clicked item
+    userId: userId,
+    quantity: 1 // Default quantity
+  };
 
-  onDelete(){}
+  // Add the cartObj to the user's cart (localStorage or API call)
+  const cartData = localStorage.getItem('cart');
+  const cart = cartData ? JSON.parse(cartData) : [];
+  cart.push(cartObj);
 
+  // Update the cart in localStorage
+  localStorage.setItem('cart', JSON.stringify(cart));
+  alert('Item added to cart successfully!');
 }
