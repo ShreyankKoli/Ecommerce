@@ -6,64 +6,58 @@ import { cart } from '../../../service/model.model';
 @Component({
   selector: 'app-dash-layout',
   standalone: false,
-  
   templateUrl: './dash-layout.component.html',
-  styleUrl: './dash-layout.component.css'
+  styleUrls: ['./dash-layout.component.css']
 })
 export class DashLayoutComponent {
-  isCarteVisible: boolean = false;
-  loggedObj: any={};
-  cartItems: any[] =[];
-  id: any =45;
-  cart: cart[]=[];
+  isCartVisible: boolean = false;  // Renamed for clarity
+  loggedObj: any = {};
+  cartItems: any[] = [];
+  cart: cart[] = [];
 
-  constructor(public router: Router, public service: ServiceService){
+  constructor(public router: Router, public service: ServiceService) {
     const localData = localStorage.getItem("login");
-    if(localData != null){
+    if (localData != null) {
+      // This block is unused, you might want to use it for further authentication checks
       // const parseObj = JSON.parse(localData);
       // this.loggedObj = parseObj;
-      // this.getCartData(this.loggedObj.userId);
-    }   
+    }
   }
 
-  getCardDetails(id: number): void {
-    const userId = localStorage.getItem('userId'); 
+  // Fetch cart details for a logged-in user
+  getCardDetails(): void {
+    const userId = localStorage.getItem('userId');
+    
     if (!userId) {
       alert("No user logged in");
+      this.router.navigate(['/login']);
       return;
     }
-    this.service.getAddToCart(id).subscribe(
+
+    this.service.getAddToCart(userId).subscribe(
       (res: any) => {
-        console.log("Hello",res);
+        console.log("Cart items fetched:", res);
+        this.cartItems = res;  // Store cart items received from the service
         this.router.navigate(['/cart']);
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-          alert("No items in cart for this user");
-        } else {
-          this.service.cart = res as cart[];
-          //this.loadCartItems();
-        }
       },
-      () => alert("Failed to get item details")
+      (err) => {
+        console.error("Error fetching cart details", err);
+        alert("Failed to get item details");
+      }
     );
   }
-  
 
-  showCart(){
-    this.isCarteVisible = !this.isCarteVisible
+  // Toggle visibility of the cart
+  showCart(): void {
+    this.isCartVisible = !this.isCartVisible;
     this.router.navigate(['/cart']);
   }
 
-  onLogOut(){
+  // Log out the user and clear session data
+  onLogOut(): void {
     localStorage.removeItem("login");
     localStorage.removeItem("roleId");
+    localStorage.removeItem("userId");
     this.router.navigate(["/login"]);
   }
-
-  // getCartData(id:number){
-  //   this.service.getAddToCart(id)
-  //   .subscribe((res:any)=>{
-  //     this.cartItems = res.model;
-  //   })
-  // }
 }
