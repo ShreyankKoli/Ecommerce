@@ -43,3 +43,45 @@ public async Task<ActionResult<List<CartDto>>> GetCart(int id)
         return StatusCode(500, $"Internal server error: {ex.Message}");
     }
 }
+
+[HttpPut("updateCartItemQuantity")]
+public async Task<IActionResult> UpdateCartItemQuantity([FromBody] UpdateCartDto updateCartDto)
+{
+    var cartItem = await context.Carts
+        .Where(c => c.CartId == updateCartDto.CartId && c.UserId == updateCartDto.UserId)
+        .FirstOrDefaultAsync();
+
+    if (cartItem == null)
+        return NotFound("Cart item not found");
+
+    cartItem.Quantity = updateCartDto.Quantity;
+    await context.SaveChangesAsync();
+
+    return Ok();
+}
+
+
+[HttpDelete("removeItemFromCart/{userId}/{cartId}")]
+public async Task<IActionResult> RemoveItemFromCart(int userId, int cartId)
+{
+    var cartItem = await context.Carts
+        .Where(c => c.CartId == cartId && c.UserId == userId)
+        .FirstOrDefaultAsync();
+
+    if (cartItem == null)
+        return NotFound("Cart item not found");
+
+    context.Carts.Remove(cartItem);
+    await context.SaveChangesAsync();
+
+    return Ok();
+}
+
+
+public class UpdateCartDto
+{
+    public int UserId { get; set; }
+    public int CartId { get; set; }
+    public int Quantity { get; set; }
+}
+
